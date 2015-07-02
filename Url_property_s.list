@@ -1,0 +1,20 @@
+# This is a short list for query YAHOO finance using :
+
+# http://download.finance.yahoo.com/d/quotes.csv?s=%40%5EDJI,GOOG&f=nsl1op
+
+n:					name 
+s: 					symbol
+d1:					Last Trade Date
+j1:					Market Capitalization
+v0:					Vulume
+w0:					Year Range
+l1: 					latest value
+o:					open of last trading day
+p:					close of last trading day
+m8:					Percent Change From Fiftyday Moving Average
+m6:					Percent Change From Two Hundredday Moving Average
+k5:					Percent Change From Year High
+j6:					Perdent Change From Year Low
+
+
+

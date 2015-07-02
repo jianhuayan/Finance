@@ -1,0 +1,227 @@
+# !/bin/sh
+# the next line restarts using tclsh \
+#exec tclsh "$0" ${1+"$@"}
+# Restart wish\
+exec wish "$0" "$@"
+
+#
+# runt - This script launches a test.  It can be called from the command line.
+# Copyright © Aurora Networks 2013
+# All Rights Reserved
+# No part of this software or any of its contents may be reproduced, copied, modified or adapted, 
+# without the prior written consent of the author, unless otherwise indicated for stand-alone materials.
+
+# Withdraw the window created by wish.
+if [info exists env(DISPLAY)] {
+   wm withdraw .
+}
+
+namespace eval runt {
+   variable return_code     0
+   variable filename        0
+   variable enter_debugger  0
+   variable log_permanent   0
+   variable email_report    0
+   variable dhcp_init       0
+   variable units_for_dhcp_init ""
+   variable suppress_report 0
+   variable host_name       [exec hostname -s]
+   variable log_name        [exec whoami]
+   variable test_params_dir tests/test_params/
+   variable drivers_dir     drivers/
+   variable sudo_dir        /usr/local/bin/sudo
+   variable default_ini_directory      tests/test_params/   ;# the directory holding the ini files.
+   variable base_mib_dir    [exec pwd]/dp/mibs
+}
+
+# Set up some necessary environment variables.
+set env(USER)    [exec /usr/bin/whoami]
+set env(MIBDIRS) ""
+
+#foreach directory [list BASE FP DOCSIS]
+foreach directory [list AUROS3.2] {
+   lappend env(MIBDIRS) ${runt::base_mib_dir}/${directory}
+}
+unset directory
+set env(MIBDIRS) [join $env(MIBDIRS) ":"]
+set env(MIBS)    "+ALL"
+
+# This procedure displays how runt is to be called and the available options.
+proc runt_show_usage { } {
+   puts "usage: ./runt -- \[-h\] \[-P\] \[-e <email-targets>\] \[-E\] \[-d\] \[-n\] path/test_name.tcl"
+   puts "  Note:  Options preceding the '--' characters are 'wish' options; those following are runt options."
+   puts "  Options:"
+   puts "       -h                  Display help."
+   puts "       -P                  Stores HTML Test Report in Permanent."
+   puts "       -e <addresses>      Email report when test finishes, where <addresses> is"
+   puts "                             a comma-separated list of email addresses."
+   puts "       -E                  Email report when test finishes, where the email addresses"
+   puts "                             are located in the file 'runt_user_email_addresses'."
+   puts "       -d                  DHCP Init." 
+   puts "       -n                  Do not generate an HTML Test Report."
+   puts "  Required:"
+   puts "       path/test_name.tcl  The test file to be executed.  Either a full path or a path relative to the ATE directory is required."
+   exit
+}
+
+# This procedure parses the command line arguments and sets the appropriate namespace variables.
+# If the command line contains invalid values, an error is thrown.
+proc runt_parse_command  { argv } {
+   if ![llength $argv] {
+      runt_show_usage
+   }
+   while { [llength $argv] } {
+      switch -- [lindex $argv 0] {
+         -h {
+            runt_show_usage
+            set argv [lrange $argv 1 end]
+         }
+         -P {
+            set runt::log_permanent 1
+            set argv [lrange $argv 1 end]
+         }
+         -e {
+	    # Email using a passed list.
+            set runt::email_report [lindex $argv 1]
+            set argv [lrange $argv 2 end]
+         }
+         -E {
+            # Email using a list from a file.
+            set runt::email_report ""
+            set email_addresses_ptr [open runt_user_email_addresses r]
+            while {[gets $email_addresses_ptr line ] != -1} {
+               lappend runt::email_report $line
+            }
+            close $email_addresses_ptr
+            set argv [lrange $argv 1 end]
+         }
+         -d {
+            set runt::dhcp_init 1
+            set argv [lrange $argv 1 end]
+         }
+         -n {
+            set runt::suppress_report 1
+            set argv [lrange $argv 1 end]
+         }
+         default {
+            # If the command line has two arguments that get interpreted as a test file name, throw an error.
+            if { $runt::filename != 0 } {
+               runt_show_usage
+            }
+            # Verify the test file exists; throw an error if it does not.
+            set runt::filename [lindex [split [string trim [lindex $argv 0] ] " "] 0]
+            if ![file exists [lindex $runt::filename 0]] {
+               error "test file not found: $runt::filename"
+            }
+            set argv [lrange $argv 1 end]
+         }
+      }
+   }
+}
+
+# This procedure sources all the applicable lib into the interpreter.
+proc runt_load_lib {} {
+      source ${runt::drivers_dir}/packages.tcl
+      if [catch "packages::init" ] {
+         error "packages::init error: $::errorInfo"
+      }
+      source ${runt::drivers_dir}packages.tcl
+}
+
+# This procedure sources all the applicable files into the interpreter.
+proc runt_source {} {
+                  
+   # Load the test.
+   if $runt::dhcp_init {
+      test::def requires    dhcp
+      test::def description "Restart DHCP server."
+      test::def name        "DHCP Initialization"
+      dhcp::init
+      dhcp::restart
+      proc test::procedure {} {}
+   } else {
+      # Get the file name from $runt::filename, which is like tests/test_quick_voice.tcl
+      uplevel #0 "source $runt::filename"
+   }
+}
+
+# Procedure to lookup email addresses in the file runt_user_email_addresses.
+proc runt_lookup_email { } {
+   set logname $::env(USER)
+
+   set email_addresses_ptr [open runt_user_email_addresses r]
+   while {[gets $email_addresses_ptr line] != -1} {
+      if { [string first $logname $line] == 0 } {
+         regsub "$logname " $line "" result
+         set result [string trim $result]
+         break
+      }
+   }
+   close $email_addresses_ptr
+   if [info exists result] {
+      return $result
+   } else {
+      return "James.Paul@Pace.com"
+   }
+}
+
+# This procedure will initialize and run the test.
+proc runt_execute_single  { argv } {
+   set runt::info(dummy) ""
+   set failed 0
+   if [catch {
+      runt_source
+      test::missing_requirements
+   } rtn ] {
+      puts $rtn
+      return
+   }
+   if {![string match 0 $runt::filename]} {
+      puts "Running test: $runt::filename"
+      if {[info exists test::info(onu)]} {
+         set test::info(onu) [string toupper $test::info(onu)]
+         foreach location $test::info(onu) {
+            catch {exec mkdir temp_rec}
+         }
+      }
+   }
+
+   if [catch {
+      # If the test script contains definition for test cases, and none of the test cases are to be tested, 
+      # do not even start the test script.
+      set file [file tail $runt::filename]
+      test::init
+      test::run
+   } err ] {
+      set failed 1
+      set errinfo $::errorInfo
+      if [catch {report::log "$err\n$::errorInfo"} er] {
+         puts $er
+         puts $errinfo
+      }
+   }
+   
+   if { !$runt::dhcp_init && !$runt::suppress_report} {
+      # Create a ATE style report for any test except 'DHCP Init', as long as the suppress_report flag is not set.
+      if [catch {report::generate_report} rtn] {
+         puts "ERROR in report::generate_report"
+         puts $rtn
+      }
+   } else {
+	catch {report::remove_log_files}
+   }
+}
+
+# RUNT runs here:
+
+runt_parse_command $argv
+#Load all the required lib needed by runt
+runt_load_lib
+
+# Launch the test executive and run the test.
+runt_execute_single $argv
+
+set code 0
+
+# Exit so the wish windows will close.
+exit $code
