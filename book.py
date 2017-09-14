@@ -59,4 +59,4 @@ else:
                 count += 1
         print("total number of books is" ,count)
         remain_dollar2 = budget - ((init_price + init_price - (count - 1) * disc_price) * count )/2
-        print("Remaining dollar amount is %",remain_dollar2)
+        print("Remaining dollar amount is ",remain_dollar2)
