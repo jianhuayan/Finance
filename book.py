@@ -7,7 +7,7 @@ import math
 #                                                                                 #
 #              Created by Jianhua Yan for tokbox evaluation                       #
 #                                                                                 #
-###################################################################################                                  
+###################################################################################                                                            
 
 # User input handling
 
@@ -51,12 +51,12 @@ if budget >= sub_total:
         print("Total number of books can be purchased is", total_book)
         remain_dollar = budget - sub_total - math.ceil((budget - sub_total)/floor_price)*floor_price
         print("Remaining dollar amount is", remain_dollar)
-
+        
 #calculate total number of books can be purchased if budget is less than sub_total
-else:
+else:        
         count = 1
-        while ((budget - ((init_price + init_price - count * disc_price) * count)/2) > (init_price - count * disc_price)):
+        while ((budget - ((init_price + init_price - (count - 1) * disc_price) * count)/2) >= (init_price - count * disc_price)):
                 count += 1
-        print("total number of books is" ,count)
+        print("total number of books is" ,count) 
         remain_dollar2 = budget - ((init_price + init_price - (count - 1) * disc_price) * count )/2
         print("Remaining dollar amount is ",remain_dollar2)
