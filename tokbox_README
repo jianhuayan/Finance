@@ -1,0 +1,71 @@
+# This python programe is to determ how many books can be purchased and how much is the balance after the purchase
+
+####################################################################################################################
+#                                            Problem Statement                                                     #
+####################################################################################################################
+
+Usually, all books are sold at the same price,  dollars. However, they are planning to have a sale for Halloween next
+month in which you can buy books at a cheaper rate. Specifically, the first book you buy during the sale will be sold
+at an initial price of exactly x dollars, but every subsequent book you buy will be sold at a discount of exactly y
+dollars less than the previous bought book<92>s cost. This will continue until the cost becomes less than or equal to
+a floor price of z dollars, after which every book  will cost you z dollars each..
+
+####################################################################################################################
+#                                            How to build                                                          #
+####################################################################################################################
+
+This is a python2.7 programe, make sure python is installed on your system and interpreter is on your system PATH
+
+
+####################################################################################################################
+#                                            How to run                                                            #
+####################################################################################################################
+
+on your shell:
+
+type: python book.py, make sure you have the exec privilage to run the programe
+
+A screen capture of running on Centos system:
+[dvn@clientsm ~]$ python book.py
+what is your budget? 300
+OK, your total budget is 300!
+what is the initial price? 50
+OK, Initlal price is 50!
+what is the discount price? 4
+OK, Discount price is 4!
+what is the floor price? 25
+OK, Floor price is 25!
+('Total number of books can be purchased is', 8)
+('Remaining dollar amount is', 9.0)
+
+
+####################################################################################################################
+#                                            How to test                                                           #
+####################################################################################################################
+
+(1) For senario where your budget can take advantage of all the discount: one example is testing case on "How to run"
+section.
+
+(2) For senario where your budget cannot take advantage of all the discount: i.e, your last book price is still higher
+than floor price:
+
+[dvn@clientsm ~]$ python book.py
+what is your budget? 245
+OK, your total budget is 245!
+what is the initial price? 50
+OK, Initlal price is 50!
+what is the discount price? 4
+OK, Discount price is 4!
+what is the floor price? 25
+OK, Floor price is 25!
+('total number of books is', 6)
+('Remaining dollar amount is ', 5)
+
+(3) Check data input and make sure program can handle gracefully, e,g, budget is less than init_price
+
+[dvn@clientsm ~]$ python book.py 
+what is your budget? 10
+OK, your total budget is 10!
+what is the initial price? 50
+OK, Initlal price is 50!
+('Budget is too low, No book can be bought, the remaining dollar is', 10)
